@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carte interactive – Origine des objets</title>
+
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f5f5f5;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  #map-container {
+    position: relative;
+    width: 1200px;
+    max-width: 100%;
+  }
+
+  #map-container img {
+    width: 100%;
+    display: block;
+  }
+
+  .continent {
+    position: absolute;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .continent:hover {
+    background: rgba(255, 255, 0, 0.2);
+  }
+
+  .continent:active {
+    background: rgba(255, 255, 0, 0.4);
+  }
+
+  .label {
+    position: absolute;
+    font-size: 18px;
+    font-weight: bold;
+    background: rgba(255,255,255,0.85);
+    padding: 3px 8px;
+    border-radius: 8px;
+    pointer-events: none;
+  }
+
+  .counter {
+    position: absolute;
+    font-size: 26px;
+    font-weight: bold;
+    color: black;
+    background: rgba(255,255,255,0.9);
+    padding: 4px 10px;
+    border-radius: 12px;
+    pointer-events: none;
+  }
+
+  /* Tableau récapitulatif - compact */
+  #recap {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255,255,255,0.95);
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 11px;
+    box-shadow: 2px 2px 6px rgba(0,0,0,0.15);
+  }
+
+  #recap h3 {
+    margin: 0 0 4px 0;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  #recap table {
+    border-collapse: collapse;
+  }
+
+  #recap td {
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+
+  #recap td:first-child {
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #recap td:last-child {
+    text-align: right;
+    font-weight: bold;
+    padding-left: 8px;
+  }
+
+  #download-btn {
+    margin-top: 6px;
+    width: 100%;
+    padding: 4px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 10px;
+  }
+
+  #download-btn:hover { background: #45a049; }
+  #download-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+  #reset-btn {
+    margin-top: 4px;
+    width: 100%;
+    padding: 4px;
+    background: #ff6b6b;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 10px;
+  }
+
+  #reset-btn:hover { background: #ff5252; }
+
+  #save-message {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(76, 175, 80, 0.9);
+    color: white;
+    padding: 8px 15px;
+    border-radius: 5px;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 10;
+  }
+
+  #save-message.show { opacity: 1; }
+
+  #progress-container {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    background: white;
+    border: 2px solid #333;
+    border-radius: 10px;
+    padding: 12px;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+  }
+
+  #progress-text {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 8px;
+    font-size: 16px;
+  }
+
+  #progress-bar-bg {
+    width: 100%;
+    height: 25px;
+    background: #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  #progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(to right, #4CAF50, #45a049);
+    width: 0%;
+    transition: width 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+  }
+
+  #right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 400px;
+    max-width: 100%;
+  }
+
+  #items-panel {
+    background: white;
+    border: 2px solid #333;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+  }
+
+  #items-panel h2 {
+    margin: 0 0 15px 0;
+    font-size: 22px;
+    text-align: center;
+  }
+
+  .continent-section { margin-bottom: 15px; }
+
+  .continent-section h3 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    color: #333;
+    border-bottom: 2px solid #ddd;
+    padding-bottom: 4px;
+  }
+
+  .item-entry {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
+    align-items: center;
+  }
+
+  .item-entry button {
+    background: #ff6b6b;
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+
+  .item-entry button:hover { background: #ff5252; }
+
+  .item-text {
+    flex: 1;
+    padding: 6px 10px;
+    background: #f9f9f9;
+    border-radius: 5px;
+    font-size: 14px;
+  }
+
+  .no-items {
+    color: #999;
+    font-style: italic;
+    font-size: 14px;
+  }
+
+  #stats-panel {
+    background: white;
+    border: 2px solid #333;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+  }
+
+  #stats-panel h2 {
+    margin: 0 0 15px 0;
+    font-size: 22px;
+    text-align: center;
+  }
+
+  .stat-item {
+    background: #f0f8ff;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    border-left: 4px solid #2196F3;
+  }
+
+  .stat-label {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 4px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2196F3;
+  }
+
+  .stat-unit {
+    font-size: 16px;
+    color: #666;
+  }
+
+  #chart-container {
+    margin-top: 15px;
+    text-align: center;
+  }
+
+  #pie-chart {
+    max-width: 100%;
+    height: auto;
+  }
+
+  #modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #modal.show { display: flex; }
+
+  #modal-content {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+
+  #modal-content h3 { margin: 0 0 15px 0; }
+
+  #modal-content input {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    margin-bottom: 15px;
+    box-sizing: border-box;
+  }
+
+  #modal-buttons { display: flex; gap: 10px; }
+
+  #modal-buttons button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  #modal-ok { background: #4CAF50; color: white; }
+  #modal-ok:hover { background: #45a049; }
+  #modal-cancel { background: #ccc; color: #333; }
+  #modal-cancel:hover { background: #bbb; }
+</style>
+</head>
+
+<body>
+
+<div id="map-container">
+
+  <div id="save-message">✓ Sauvegardé automatiquement</div>
+
+  <img src="continents_carte_du_monde_colore.jpg" alt="Carte du monde">
+
+  <!-- Zones cliquables -->
+  <div class="continent" id="amerique_nord" style="top:20px; left:80px; width:350px; height:260px;" tabindex="0" role="button" aria-label="Amérique du Nord"></div>
+  <div class="continent" id="amerique_sud" style="top:280px; left:160px; width:260px; height:260px;" tabindex="0" role="button" aria-label="Amérique du Sud"></div>
+  <div class="continent" id="europe" style="top:40px; left:470px; width:200px; height:160px;" tabindex="0" role="button" aria-label="Europe"></div>
+  <div class="continent" id="afrique" style="top:180px; left:450px; width:240px; height:300px;" tabindex="0" role="button" aria-label="Afrique"></div>
+  <div class="continent" id="asie" style="top:60px; left:680px; width:360px; height:300px;" tabindex="0" role="button" aria-label="Asie"></div>
+  <div class="continent" id="oceanie" style="top:340px; left:840px; width:220px; height:180px;" tabindex="0" role="button" aria-label="Océanie"></div>
+
+  <!-- Noms des continents -->
+  <div class="label" style="top:150px; left:180px;">Amérique du Nord</div>
+  <div class="label" style="top:400px; left:260px;">Amérique du Sud</div>
+  <div class="label" style="top:100px; left:520px;">Europe</div>
+  <div class="label" style="top:350px; left:580px;">Afrique</div>
+  <div class="label" style="top:160px; left:720px;">Asie</div>
+  <div class="label" style="top:420px; left:950px;">Océanie</div>
+
+  <!-- Compteurs sur la carte -->
+  <div class="counter" id="count-amerique_nord" style="top:180px; left:240px;">0</div>
+  <div class="counter" id="count-amerique_sud" style="top:430px; left:310px;">0</div>
+  <div class="counter" id="count-europe" style="top:150px; left:560px;">0</div>
+  <div class="counter" id="count-afrique" style="top:400px; left:600px;">0</div>
+  <div class="counter" id="count-asie" style="top:200px; left:740px;">0</div>
+  <div class="counter" id="count-oceanie" style="top:470px; left:950px;">0</div>
+
+  <!-- Tableau récapitulatif compact -->
+  <div id="recap">
+    <h3>📊 Total</h3>
+    <table>
+      <tr><td>Am. Nord</td><td id="recap-amerique_nord">0</td></tr>
+      <tr><td>Am. Sud</td><td id="recap-amerique_sud">0</td></tr>
+      <tr><td>Europe</td><td id="recap-europe">0</td></tr>
+      <tr><td>Afrique</td><td id="recap-afrique">0</td></tr>
+      <tr><td>Asie</td><td id="recap-asie">0</td></tr>
+      <tr><td>Océanie</td><td id="recap-oceanie">0</td></tr>
+    </table>
+    <button id="download-btn">💾 Télécharger</button>
+    <button id="reset-btn">🔄 Reset</button>
+  </div>
+
+  <!-- Barre de progression -->
+  <div id="progress-container">
+    <div id="progress-text">0 / 30 objets trouvés</div>
+    <div id="progress-bar-bg">
+      <div id="progress-bar-fill">0%</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Panel de droite -->
+<div id="right-panel">
+
+  <!-- Statistiques -->
+  <div id="stats-panel">
+    <h2>🌍 Statistiques environnementales</h2>
+    <div class="stat-item">
+      <div class="stat-label">Distance totale parcourue</div>
+      <div class="stat-value" id="total-distance">0</div>
+      <span class="stat-unit">km</span>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Distance moyenne par objet</div>
+      <div class="stat-value" id="avg-distance">0</div>
+      <span class="stat-unit">km</span>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Équivalent en tours du monde</div>
+      <div class="stat-value" id="earth-tours">0</div>
+      <span class="stat-unit">fois</span>
+    </div>
+    <div id="chart-container">
+      <canvas id="pie-chart" width="300" height="300"></canvas>
+    </div>
+  </div>
+
+  <!-- Liste des objets -->
+  <div id="items-panel">
+    <h2>📋 Liste des objets</h2>
+    <div id="items-list"></div>
+  </div>
+
+</div>
+
+<!-- Modal -->
+<div id="modal">
+  <div id="modal-content">
+    <h3>Ajouter un objet</h3>
+    <p id="modal-continent"></p>
+    <input type="text" id="modal-input" placeholder="Ex: T-shirt, iPhone, Ballon...">
+    <div id="modal-buttons">
+      <button id="modal-ok">Ajouter</button>
+      <button id="modal-cancel">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const continentNames = {
+    amerique_nord: "Amérique du Nord",
+    amerique_sud: "Amérique du Sud",
+    europe: "Europe",
+    afrique: "Afrique",
+    asie: "Asie",
+    oceanie: "Océanie"
+  };
+
+  const distances = {
+    amerique_nord: 2500,
+    amerique_sud: 7500,
+    europe: 5500,
+    afrique: 9000,
+    asie: 11000,
+    oceanie: 15000
+  };
+
+  const continentColors = {
+    amerique_nord: '#FF6B6B',
+    amerique_sud: '#4ECDC4',
+    europe: '#45B7D1',
+    afrique: '#FFA07A',
+    asie: '#98D8C8',
+    oceanie: '#F7DC6F'
+  };
+
+  const savedData = localStorage.getItem('continentData');
+  let data = savedData ? JSON.parse(savedData) : {
+    amerique_nord: { count: 0, items: [] },
+    amerique_sud: { count: 0, items: [] },
+    europe: { count: 0, items: [] },
+    afrique: { count: 0, items: [] },
+    asie: { count: 0, items: [] },
+    oceanie: { count: 0, items: [] }
+  };
+
+  let currentContinent = null;
+
+  function saveData() {
+    localStorage.setItem('continentData', JSON.stringify(data));
+    showSaveMessage();
+  }
+
+  function showSaveMessage() {
+    const msg = document.getElementById('save-message');
+    msg.classList.add('show');
+    setTimeout(() => msg.classList.remove('show'), 2000);
+  }
+
+  function getTotalItems() {
+    return Object.values(data).reduce((sum, c) => sum + c.items.length, 0);
+  }
+
+  function calculateTotalDistance() {
+    let total = 0;
+    for (const [continent, info] of Object.entries(data)) {
+      total += info.items.length * distances[continent];
+    }
+    return total;
+  }
+
+  function updateStats() {
+    const totalDist = calculateTotalDistance();
+    const totalItems = getTotalItems();
+    const avgDist = totalItems > 0 ? Math.round(totalDist / totalItems) : 0;
+    const earthTours = (totalDist / 40075).toFixed(2);
+    document.getElementById('total-distance').textContent = totalDist.toLocaleString();
+    document.getElementById('avg-distance').textContent = avgDist.toLocaleString();
+    document.getElementById('earth-tours').textContent = earthTours;
+  }
+
+  function drawPieChart() {
+    const canvas = document.getElementById('pie-chart');
+    const ctx = canvas.getContext('2d');
+    const cx = canvas.width / 2, cy = canvas.height / 2, r = 120;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const totalItems = getTotalItems();
+
+    if (totalItems === 0) {
+      ctx.fillStyle = '#999';
+      ctx.font = '16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Aucune donnée', cx, cy);
+      return;
+    }
+
+    let angle = -Math.PI / 2;
+    for (const [continent, info] of Object.entries(data)) {
+      if (info.items.length > 0) {
+        const sliceAngle = (info.items.length / totalItems) * 2 * Math.PI;
+        ctx.beginPath();
+        ctx.fillStyle = continentColors[continent];
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, r, angle, angle + sliceAngle);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        const pct = Math.round((info.items.length / totalItems) * 100);
+        if (pct >= 5) {
+          const la = angle + sliceAngle / 2;
+          ctx.fillStyle = 'white';
+          ctx.font = 'bold 14px Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(pct + '%', cx + Math.cos(la) * r * 0.7, cy + Math.sin(la) * r * 0.7);
+        }
+        angle += sliceAngle;
+      }
+    }
+
+    let ly = 10;
+    ctx.textAlign = 'left';
+    ctx.font = '12px Arial';
+    for (const [continent, info] of Object.entries(data)) {
+      if (info.items.length > 0) {
+        ctx.fillStyle = continentColors[continent];
+        ctx.fillRect(10, ly, 15, 15);
+        ctx.fillStyle = '#333';
+        const pct = Math.round((info.items.length / totalItems) * 100);
+        ctx.fillText(`${continentNames[continent]} (${pct}%)`, 30, ly + 11);
+        ly += 20;
+      }
+    }
+  }
+
+  function updateProgress() {
+    const total = getTotalItems();
+    const pct = Math.min((total / 30) * 100, 100);
+    document.getElementById('progress-text').textContent = `${total} / 30 objets trouvés`;
+    document.getElementById('progress-bar-fill').style.width = pct + '%';
+    document.getElementById('progress-bar-fill').textContent = Math.round(pct) + '%';
+  }
+
+  function updateDisplay() {
+    for (const [continent, info] of Object.entries(data)) {
+      document.getElementById("count-" + continent).textContent = info.items.length;
+      document.getElementById("recap-" + continent).textContent = info.items.length;
+    }
+    updateProgress();
+    updateItemsList();
+    updateStats();
+    drawPieChart();
+  }
+
+  function updateItemsList() {
+    const list = document.getElementById('items-list');
+    list.innerHTML = '';
+    for (const [continent, info] of Object.entries(data)) {
+      if (info.items.length > 0) {
+        const section = document.createElement('div');
+        section.className = 'continent-section';
+        const title = document.createElement('h3');
+        title.textContent = `${continentNames[continent]} (${info.items.length})`;
+        section.appendChild(title);
+        info.items.forEach((item, index) => {
+          const entry = document.createElement('div');
+          entry.className = 'item-entry';
+          const text = document.createElement('div');
+          text.className = 'item-text';
+          text.textContent = item;
+          const del = document.createElement('button');
+          del.textContent = '✕';
+          del.onclick = () => deleteItem(continent, index);
+          entry.appendChild(text);
+          entry.appendChild(del);
+          section.appendChild(entry);
+        });
+        list.appendChild(section);
+      }
+    }
+    if (getTotalItems() === 0) {
+      const noItems = document.createElement('div');
+      noItems.className = 'no-items';
+      noItems.textContent = 'Aucun objet ajouté. Cliquez sur un continent pour commencer !';
+      list.appendChild(noItems);
+    }
+  }
+
+  function deleteItem(continent, index) {
+    data[continent].items.splice(index, 1);
+    updateDisplay();
+    saveData();
+  }
+
+  function showModal(continent) {
+    currentContinent = continent;
+    document.getElementById('modal-continent').textContent = `Continent : ${continentNames[continent]}`;
+    document.getElementById('modal-input').value = '';
+    document.getElementById('modal').classList.add('show');
+    document.getElementById('modal-input').focus();
+  }
+
+  function hideModal() {
+    document.getElementById('modal').classList.remove('show');
+    currentContinent = null;
+  }
+
+  function addItem() {
+    const name = document.getElementById('modal-input').value.trim();
+    if (name && currentContinent) {
+      data[currentContinent].items.push(name);
+      updateDisplay();
+      saveData();
+      hideModal();
+    }
+  }
+
+  updateDisplay();
+
+  document.querySelectorAll(".continent").forEach(el => {
+    el.addEventListener("click", () => showModal(el.id));
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showModal(el.id); }
+    });
+  });
+
+  document.getElementById('modal-ok').addEventListener('click', addItem);
+  document.getElementById('modal-cancel').addEventListener('click', hideModal);
+  document.getElementById('modal-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') addItem();
+    else if (e.key === 'Escape') hideModal();
+  });
+
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    if (confirm('Réinitialiser tous les compteurs et supprimer tous les objets ?')) {
+      for (const c in data) data[c] = { count: 0, items: [] };
+      updateDisplay();
+      saveData();
+    }
+  });
+
+  document.getElementById('download-btn').addEventListener('click', () => {
+    const btn = document.getElementById('download-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ En cours...';
+
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 2100;
+      canvas.height = 2970;
+
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Titre
+      ctx.fillStyle = '#333';
+      ctx.font = 'bold 48px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText("Mon enquête sur l'origine des objets", canvas.width / 2, 80);
+
+      ctx.font = '24px Arial';
+      ctx.fillText('Nom: _______________________', canvas.width / 2, 140);
+      const today = new Date().toLocaleDateString('fr-CA');
+      ctx.fillText(`Date: ${today}`, canvas.width / 2, 180);
+
+      // Ligne
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(100, 220);
+      ctx.lineTo(canvas.width - 100, 220);
+      ctx.stroke();
+
+      // Statistiques
+      let y = 280;
+      ctx.font = 'bold 36px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText('📊 Statistiques environnementales', 100, y);
+
+      y += 60;
+      ctx.font = '28px Arial';
+      const totalItems = getTotalItems();
+      const totalDist = calculateTotalDistance();
+      const avgDist = totalItems > 0 ? Math.round(totalDist / totalItems) : 0;
+      const earthTours = (totalDist / 40075).toFixed(2);
+
+      ctx.fillText(`✓ Nombre d'objets analysés: ${totalItems} / 30`, 150, y); y += 50;
+      ctx.fillText(`✓ Distance totale parcourue: ${totalDist.toLocaleString()} km`, 150, y); y += 50;
+      ctx.fillText(`✓ Distance moyenne par objet: ${avgDist.toLocaleString()} km`, 150, y); y += 50;
+      ctx.fillText(`✓ Équivalent en tours du monde: ${earthTours} fois`, 150, y);
+
+      // Répartition
+      y += 100;
+      ctx.font = 'bold 36px Arial';
+      ctx.fillText('🌍 Répartition par continent', 100, y);
+      y += 60;
+      ctx.font = '28px Arial';
+
+      for (const [continent, info] of Object.entries(data)) {
+        if (info.items.length > 0) {
+          const pct = Math.round((info.items.length / totalItems) * 100);
+          ctx.fillStyle = continentColors[continent];
+          ctx.fillRect(150, y - 25, 40, 40);
+          ctx.fillStyle = '#333';
+          ctx.fillText(`${continentNames[continent]}: ${info.items.length} objets (${pct}%)`, 210, y);
+          y += 60;
+        }
+      }
+
+      // Liste détaillée
+      y += 60;
+      ctx.font = 'bold 36px Arial';
+      ctx.fillText('📋 Liste détaillée de mes objets', 100, y);
+      y += 60;
+      let num = 1;
+
+      for (const [continent, info] of Object.entries(data)) {
+        if (info.items.length > 0) {
+          ctx.font = 'bold 28px Arial';
+          ctx.fillStyle = continentColors[continent];
+          ctx.fillText(continentNames[continent], 150, y);
+          y += 40;
+          ctx.font = '24px Arial';
+          ctx.fillStyle = '#333';
+          info.items.forEach(item => {
+            if (y < canvas.height - 150) {
+              ctx.fillText(`   ${num}. ${item}`, 180, y);
+              y += 40;
+              num++;
+            }
+          });
+          y += 20;
+        }
+      }
+
+      // Pied de page
+      ctx.font = 'italic 20px Arial';
+      ctx.fillStyle = '#666';
+      ctx.textAlign = 'center';
+      ctx.fillText('Projet réalisé dans le cadre du cours sur la consommation responsable', canvas.width / 2, canvas.height - 80);
+      ctx.fillText('Nouveau-Brunswick, Canada', canvas.width / 2, canvas.height - 50);
+
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `origine-objets-${today}.png`;
+        link.click();
+        URL.revokeObjectURL(url);
+        btn.disabled = false;
+        btn.textContent = '💾 Télécharger';
+      }, 'image/png');
+
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors de la génération. Veuillez réessayer.');
+      btn.disabled = false;
