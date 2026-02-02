@@ -62,7 +62,6 @@
     pointer-events: none;
   }
 
-  /* Tableau récapitulatif - compact */
   #recap {
     position: absolute;
     top: 10px;
@@ -360,12 +359,10 @@
 <body>
 
 <div id="map-container">
-
   <div id="save-message">✓ Sauvegardé automatiquement</div>
-
   <img src="continents_carte_du_monde_colore.jpg" alt="Carte du monde">
 
-  <!-- Zones cliquables -->
+    <!-- Zones cliquables -->
   <div class="continent" id="amerique_nord" style="top:20px; left:80px; width:350px; height:260px;" tabindex="0" role="button" aria-label="Amérique du Nord"></div>
   <div class="continent" id="amerique_sud" style="top:280px; left:160px; width:260px; height:260px;" tabindex="0" role="button" aria-label="Amérique du Sud"></div>
   <div class="continent" id="europe" style="top:40px; left:470px; width:200px; height:160px;" tabindex="0" role="button" aria-label="Europe"></div>
@@ -389,7 +386,6 @@
   <div class="counter" id="count-asie" style="top:200px; left:740px;">0</div>
   <div class="counter" id="count-oceanie" style="top:375px; left:950px;">0</div>
 
-  <!-- Tableau récapitulatif compact -->
   <div id="recap">
     <h3>📊 Total</h3>
     <table>
@@ -404,20 +400,15 @@
     <button id="reset-btn">🔄 Reset</button>
   </div>
 
-  <!-- Barre de progression -->
   <div id="progress-container">
     <div id="progress-text">0 / 30 objets trouvés</div>
     <div id="progress-bar-bg">
       <div id="progress-bar-fill">0%</div>
     </div>
   </div>
-
 </div>
 
-<!-- Panel de droite -->
 <div id="right-panel">
-
-  <!-- Statistiques -->
   <div id="stats-panel">
     <h2>🌍 Statistiques environnementales</h2>
     <div class="stat-item">
@@ -440,15 +431,12 @@
     </div>
   </div>
 
-  <!-- Liste des objets -->
   <div id="items-panel">
     <h2>📋 Liste des objets</h2>
     <div id="items-list"></div>
   </div>
-
 </div>
 
-<!-- Modal -->
 <div id="modal">
   <div id="modal-content">
     <h3>Ajouter un objet</h3>
@@ -491,22 +479,18 @@
 
   const savedData = localStorage.getItem('continentData');
   let data = savedData ? JSON.parse(savedData) : {
-    amerique_nord: { count: 0, items: [] },
-    amerique_sud: { count: 0, items: [] },
-    europe: { count: 0, items: [] },
-    afrique: { count: 0, items: [] },
-    asie: { count: 0, items: [] },
-    oceanie: { count: 0, items: [] }
+    amerique_nord: { items: [] },
+    amerique_sud: { items: [] },
+    europe: { items: [] },
+    afrique: { items: [] },
+    asie: { items: [] },
+    oceanie: { items: [] }
   };
 
   let currentContinent = null;
 
   function saveData() {
     localStorage.setItem('continentData', JSON.stringify(data));
-    showSaveMessage();
-  }
-
-  function showSaveMessage() {
     const msg = document.getElementById('save-message');
     msg.classList.add('show');
     setTimeout(() => msg.classList.remove('show'), 2000);
@@ -678,7 +662,10 @@
   document.querySelectorAll(".continent").forEach(el => {
     el.addEventListener("click", () => showModal(el.id));
     el.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showModal(el.id); }
+      if (e.key === "Enter" || e.key === " ") { 
+        e.preventDefault(); 
+        showModal(el.id); 
+      }
     });
   });
 
@@ -691,7 +678,7 @@
 
   document.getElementById('reset-btn').addEventListener('click', () => {
     if (confirm('Réinitialiser tous les compteurs et supprimer tous les objets ?')) {
-      for (const c in data) data[c] = { count: 0, items: [] };
+      for (const c in data) data[c] = { items: [] };
       updateDisplay();
       saveData();
     }
@@ -707,11 +694,9 @@
       const ctx = canvas.getContext('2d');
       canvas.width = 2100;
       canvas.height = 2970;
-
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Titre
       ctx.fillStyle = '#333';
       ctx.font = 'bold 48px Arial';
       ctx.textAlign = 'center';
@@ -722,7 +707,6 @@
       const today = new Date().toLocaleDateString('fr-CA');
       ctx.fillText(`Date: ${today}`, canvas.width / 2, 180);
 
-      // Ligne
       ctx.strokeStyle = '#333';
       ctx.lineWidth = 3;
       ctx.beginPath();
@@ -730,7 +714,6 @@
       ctx.lineTo(canvas.width - 100, 220);
       ctx.stroke();
 
-      // Statistiques
       let y = 280;
       ctx.font = 'bold 36px Arial';
       ctx.textAlign = 'left';
@@ -748,7 +731,6 @@
       ctx.fillText(`✓ Distance moyenne par objet: ${avgDist.toLocaleString()} km`, 150, y); y += 50;
       ctx.fillText(`✓ Équivalent en tours du monde: ${earthTours} fois`, 150, y);
 
-      // Répartition
       y += 100;
       ctx.font = 'bold 36px Arial';
       ctx.fillText('🌍 Répartition par continent', 100, y);
@@ -766,7 +748,6 @@
         }
       }
 
-      // Liste détaillée
       y += 60;
       ctx.font = 'bold 36px Arial';
       ctx.fillText('📋 Liste détaillée de mes objets', 100, y);
@@ -792,7 +773,6 @@
         }
       }
 
-      // Pied de page
       ctx.font = 'italic 20px Arial';
       ctx.fillStyle = '#666';
       ctx.textAlign = 'center';
@@ -811,7 +791,12 @@
       }, 'image/png');
 
     } catch (err) {
-      console.error(err);
-      alert('Erreur lors de la génération. Veuillez réessayer.');
-
+      alert('Erreur lors de la génération.');
       btn.disabled = false;
+      btn.textContent = '💾 Télécharger';
+    }
+  });
+</script>
+
+</body>
+</html>
